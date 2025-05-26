@@ -1,0 +1,9 @@
+preprocessing_isimip/__pycache__/
+preprocessing_isimip/data/
+preprocessing_isimip/waterscarcity_index_isimip2b.nc
+preprocessing_isimip/population_corrected_sabin/
+preprocessing_isimip/.*
+preprocessing_isimip/std*
+preprocessing_isimip/core*
+preprocessing_isimip/*.log
+

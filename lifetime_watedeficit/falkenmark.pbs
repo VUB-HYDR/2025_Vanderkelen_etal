@@ -1,0 +1,29 @@
+#!/bin/bash -l
+#PBS -l nodes=1:ppn=1
+#PBS -l mem=30gb
+
+
+#PBS -l walltime=12:00:00
+  
+#PBS -o stdout.falkenmark
+#PBS -e stderr.falkenmark
+
+ml Python/3.9.6-GCCcore-11.2.0
+ml geopandas/0.11.0-foss-2021b
+ml openpyxl/3.0.9-GCCcore-11.2.0
+ml regionmask/0.9.0-foss-2021b
+ml xarray/0.20.1-foss-2021b
+ml netcdf4-python/1.5.8-foss-2021b
+ml SciPy-bundle/2021.10-foss-2021b
+ml matplotlib/3.4.3-foss-2021b
+ml Cartopy/0.20.3-foss-2021b
+ml Shapely/1.8.2-foss-2021b
+ml nc-time-axis/1.4.1-foss-2021b
+
+module swap xarray/0.20.1-foss-2021b xarray/2022.6.0-foss-2021b
+
+
+
+cd /scratch/brussel/vo/000/bvo00012/vsc10055/waterscarcity/lifetime_exposure_isimip/
+
+python falkenmark.py
