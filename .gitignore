@@ -7,3 +7,11 @@ preprocessing_isimip/std*
 preprocessing_isimip/core*
 preprocessing_isimip/*.log
 
+
+lifetime_waterdeficit/.ipynb_checkpoints/
+lifetime_waterdeficit/core.*
+lifetime_waterdeficit/*.log 
+lifetime_waterdeficit/__pycache__/
+lifetime_waterdeficit/.directory
+lifetime_waterdeficit/data/
+lifetime_waterdeficit/figures/
