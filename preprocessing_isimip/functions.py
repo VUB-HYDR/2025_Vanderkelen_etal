@@ -507,34 +507,98 @@ def calc_waterscarcity_index(model, forcing, scenario, landmask, da_cellarea, fl
 
 
 ## CHECK THIS FUCTION AGAIN, KERNEL ALWAYS DIES
-def get_efr(qtot):
-
-    # compute yearly means
-    qtot_ymean = qtot.groupby('time.year').mean()
-
-    # intialise lowflow, mediumflow and highflow 
-    mask_lowflow    = xr.DataArray(data = np.zeros_like(qtot.values),coords=qtot.coords, dims=qtot.dims)
-    mask_mediumflow = xr.DataArray(data = np.zeros_like(qtot.values),coords=qtot.coords, dims=qtot.dims)
-    mask_highflow   = xr.DataArray(data = np.zeros_like(qtot.values),coords=qtot.coords, dims=qtot.dims)
+def get_efr(qtot, method = "VMF"):
 
 
-    # for every year, calculate masks with corresponding annual means
-    
-    for group_name, group_da in qtot.groupby('time.year'):
-        mask_lowflow[mask_lowflow.time.dt.year == group_name] = group_da <= 0.4*qtot_ymean.where(qtot_ymean.year==group_name, drop=True).squeeze()
-        mask_mediumflow[mask_mediumflow.time.dt.year == group_name] = group_da > 0.8*qtot_ymean.where(qtot_ymean.year==group_name, drop=True).squeeze()
+    # Average Monthly Flow method from Pastor et al., 2014
+    if method == "VMF":
+        # compute yearly means
+        qtot_ymean = qtot.groupby('time.year').mean()
 
-    mask_highflow = mask_lowflow + mask_mediumflow == 0 # mediumflow is in between high flow and low flow
+        # intialise lowflow, mediumflow and highflow 
+        mask_lowflow    = xr.DataArray(data = np.zeros_like(qtot.values),coords=qtot.coords, dims=qtot.dims)
+        mask_mediumflow = xr.DataArray(data = np.zeros_like(qtot.values),coords=qtot.coords, dims=qtot.dims)
+        mask_highflow   = xr.DataArray(data = np.zeros_like(qtot.values),coords=qtot.coords, dims=qtot.dims)
 
 
-    # determine environmental flow conditions
-    efr =   qtot
+        # for every year, calculate masks with corresponding annual means
+        
+        for group_name, group_da in qtot.groupby('time.year'):
+            mask_lowflow[mask_lowflow.time.dt.year == group_name] = group_da <= 0.4*qtot_ymean.where(qtot_ymean.year==group_name, drop=True).squeeze()
+            mask_mediumflow[mask_mediumflow.time.dt.year == group_name] = group_da > 0.8*qtot_ymean.where(qtot_ymean.year==group_name, drop=True).squeeze()
 
-    # apply inverse masks, as where function assigns values to places where mask is not true
-    efr = efr.where(mask_lowflow==0   ,  0.6 * qtot)
-    efr = efr.where(mask_mediumflow==0,  0.3 * qtot)
-    efr = efr.where(mask_highflow==0  ,  0.45 * qtot)
-    
+        mask_highflow = (mask_lowflow + mask_mediumflow) == 0 # mediumflow is in between high flow and low flow
+
+
+        # determine environmental flow conditions
+        efr =   qtot
+
+        # apply inverse masks, as where function assigns values to places where mask is not true
+        efr = efr.where(mask_lowflow==0   ,  0.6 * qtot)
+        efr = efr.where(mask_mediumflow==0,  0.3 * qtot)
+        efr = efr.where(mask_highflow==0  ,  0.45 * qtot)
+
+
+    elif method == "Tessmann": #Tessmann 1980
+
+        # (1) compute yearly mean (dims: ['year', ...])
+        qtot_yearly = qtot.groupby("time.year").mean("time")
+
+        # (2) align yearly means to the original time axis
+        qtot_annual_by_time = qtot_yearly.sel(year=qtot["time.year"])
+
+        # (3) define the three conditions (lazy; no materialization)
+        cond_low  = (qtot <= 0.4 * qtot_annual_by_time)   # low flow
+        cond_high = (qtot >           qtot_annual_by_time)   # high flow
+        # medium is the remaining case: not low and not high
+        # but you can also express it as (qtot > 0.4 * qtot_annual_by_time) & (~cond_high)
+        # we'll rely on nested where below to avoid creating it explicitly
+
+        # (4) build efr in one expression (no intermediate full-size masks)
+        # semantics you used: low -> qtot, high -> 0.4*qtot, medium -> 0.4*qtot_yearly_for_that_time
+        efr = xr.where(
+            cond_low,
+            qtot,                                           # where low: keep qtot
+            xr.where(
+                cond_high,
+                0.4 * qtot,                                 # where high: 0.4*qtot
+                0.4 * qtot_annual_by_time                    # else (medium): use 0.4 * yearly mean (aligned to time)
+            )
+        )
+            
+
+        
+    elif method == "AFQ": # Annual Flow Quantiles (non-parametric method based on Q50 and Q95)
+        # doesn't work yet because of negative runoff values for some simulations!!!
+
+
+        # compute yearly means
+        qtot_ymean = qtot.groupby('time.year').mean()
+        
+        q_90 = qtot.where(qtot>0,0).quantile(0.9, dim='time')
+        q_50 = qtot.where(qtot>0,0).quantile(0.5, dim='time')
+        q_ymean = qtot.groupby('time.year').mean()
+
+        mask_lowflow    = xr.DataArray(data = np.zeros_like(qtot.values),coords=qtot.coords, dims=qtot.dims)
+        mask_highflow   = xr.DataArray(data = np.zeros_like(qtot.values),coords=qtot.coords, dims=qtot.dims)
+
+        for group_name, group_da in qtot.groupby('time.year'):
+            mask_lowflow[mask_lowflow.time.dt.year == group_name] = group_da <= qtot_ymean.where(qtot_ymean.year==group_name, drop=True).squeeze()
+            mask_highflow[mask_highflow.time.dt.year == group_name] = group_da > qtot_ymean.where(qtot_ymean.year==group_name, drop=True).squeeze()
+
+
+        # determine environmental flow conditions
+        efr =   qtot
+
+        # apply inverse masks, as where function assigns values to places where mask is not true
+        efr = efr.where(mask_lowflow==0 ,q_90)
+        efr = efr.where(mask_highflow==0, q_50)
+
+
+    ## no ERF
+    elif method == "noEFR":
+        efr = qtot * 0.0
+
     return efr
 
 
@@ -773,7 +837,7 @@ def pop_yearly_to_monthly(popdir, fn_pop_hist, fn_pop_fut ):
 def load_pop(fn_pop): 
     
     if phase == '2b': 
-        popdir = scriptsdir+'/data/intermediate/'
+        popdir = scriptsdir+'/data/population_corrected_sabin/'
     else: 
         popdir = outdir+'/intermediate/'
     return xr.open_dataset(popdir+fn_pop)['pop']   
@@ -1780,7 +1844,7 @@ def save_to_lifetimedir(da, variable, model, forcing, scenario, annual=False):
 
 
 # calculate and save water deficit, and water withdrawal
-def calc_water_deficit(model, forcing, scenario, da_cellarea, landmask, pop):
+def calc_water_deficit(model, forcing, scenario, da_cellarea, landmask, pop, efr_method = "VMF"):
 
     # load grid cell runoff
     qtot = load_simulation('qtot', datadir, model, forcing, scenario)
@@ -1792,7 +1856,7 @@ def calc_water_deficit(model, forcing, scenario, da_cellarea, landmask, pop):
     q_avail_withoutefr = dis_upstream * 1000/da_cellarea + qtot # UNITS! dis is in m³/s, convert to mm/m²s
 
     # subtract envrironmental flow requirement of water availability
-    q_avail =  q_avail_withoutefr - get_efr(q_avail_withoutefr)
+    q_avail =  q_avail_withoutefr - get_efr(q_avail_withoutefr, method=efr_method)
     del  dis_upstream
     
     # put hard condition of setting negative water availabilities to 0 (this is a problem for the simulations of H08)
@@ -1859,8 +1923,15 @@ def calc_water_deficit(model, forcing, scenario, da_cellarea, landmask, pop):
     withdrawal_perperson = (withdrawal.where(pop) / pop).assign_coords(time= time_ds.values)
 
 
+    # for efr sensitivity study
+    if efr_method == "VMF": 
+        efr_addition = ""
+    else: 
+        efr_addition = efr_method
+
+
     # save into new variables
-    save_to_lifetimedir(water_deficit_perperson, 'waterdeficit', model, forcing, scenario, annual=True)
+    save_to_lifetimedir(water_deficit_perperson, 'waterdeficit'+efr_addition, model, forcing, scenario, annual=True)
     save_to_lifetimedir(withdrawal_perperson, 'withdrawal', model, forcing, scenario, annual = True)    
     
     

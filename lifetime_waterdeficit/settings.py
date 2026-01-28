@@ -73,6 +73,8 @@ def init():
           'waterscarcity'  : ['LPJmL','MATSIRO', 'H08' , 'CWatM' ], # ,  'WaterGAP2-2e'],# 'H08']
           'falkenmark' : ['LPJmL','MATSIRO', 'H08' , 'CWatM'],#
           'waterdeficit' : ['LPJmL','MATSIRO', 'H08' , 'CWatM'] ,#
+          'waterdeficitnoEFR' : ['LPJmL','MATSIRO', 'H08' , 'CWatM'] ,#
+          'waterdeficitTessmann' : ['LPJmL','MATSIRO', 'H08' , 'CWatM'] ,#
           'withdrawal'  : ['LPJmL','MATSIRO', 'H08' , 'CWatM'], 
            'waterdeficitcstpop'  :  ['LPJmL','MATSIRO', 'H08' , 'CWatM'],
            'waterdeficitduration'  :  ['LPJmL','MATSIRO', 'H08' , 'CWatM'],

@@ -239,7 +239,7 @@ def load_isimip(
                         if phase == '2b': 
                             file_names = glob.glob('./data/isimip/2b/'+extreme+'/'+model.lower()+'/'+model.lower()+'*rcp*'+extreme+'_*annual*landarea*2099*')
 
-                            if extreme == 'waterdeficit' or extreme =='withdrawal' or extreme =='waterdeficitintensity': 
+                            if extreme == 'waterdeficit' or extreme =='withdrawal' or extreme =='waterdeficitintensity' or extreme == 'waterdeficitnoEFR' or extreme == 'waterdeficitTessmann': 
                                 file_names = glob.glob('./data/isimip/2b/'+extreme+'/'+model.lower()+'/'+model.lower()+'*rcp*'+extreme+'*annual*2099*')
 
                         file_names = sorted(file_names)
@@ -279,7 +279,7 @@ def load_isimip(
                                 tas_filename = '*tas_global_annual*.txt'
 
                             # load associated historical variable
-                            if extreme == 'waterdeficit' or extreme =='withdrawal' or extreme =='waterdeficitintensity': 
+                            if extreme == 'waterdeficit' or extreme =='withdrawal' or extreme =='waterdeficitintensity' or extreme == 'waterdeficitnoEFR' or extreme == 'waterdeficitTessmann': 
                                 file_name_his = glob.glob(isimip_dir+extreme+'/'+model.lower()+'/'+model.lower()+'*'+d_isimip_meta[i]['gcm']+'*_historical_*'+extreme+'_'+'*annual*')[0]
                             else: 
 

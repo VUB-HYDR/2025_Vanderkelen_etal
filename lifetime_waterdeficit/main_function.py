@@ -203,7 +203,6 @@ def do_lifetime_analysis(flags):
     RCP2GMT_maxdiff_threshold)
     
 
-
     # 5. Compute exposure per lifetime
 
     if flags['exposure']: 
